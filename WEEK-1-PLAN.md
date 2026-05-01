@@ -8,15 +8,15 @@ The work is broken into seven issues sized to roughly 2–4 hours each. Numberin
 
 ## #1 — Project skeleton and `pom.xml`
 
-Initialize the Maven project with Spring Boot 3.2 and the right dependencies up front, so you do not fight the build later.
+Initialize the Maven project with Spring Boot 3.4 and the right dependencies up front, so you do not fight the build later.
 
 **Tasks**
-- Create the Maven structure: `src/main/java`, `src/main/resources`, `src/test/java`.
-- Use `start.spring.io` or the Spring Initializr CLI to generate the base. Group `com.trafficguard`, artifact `api-traffic-guard`, Java 17, packaging JAR.
-- Add dependencies: `spring-boot-starter-web`, `spring-boot-starter-data-jpa`, `spring-boot-starter-data-redis`, `spring-boot-starter-validation`, `spring-boot-starter-actuator`, `postgresql` (runtime), `flyway-core`, `lombok`, `spring-boot-starter-test`.
-- Commit a `.gitignore` (target/, .idea/, .vscode/, *.iml, etc.) and an empty `LICENSE` (MIT).
+- Generate the project structure via [start.spring.io](https://start.spring.io) with: Maven, Java 21, Spring Boot 3.4.x, packaging JAR. Group `com.trafficguard`, artifact `api-traffic-guard`.
+- Required dependencies: `spring-boot-starter-web`, `spring-boot-starter-data-jpa`, `spring-boot-starter-data-redis`, `spring-boot-starter-validation`, `spring-boot-starter-actuator`, `postgresql` (runtime), `flyway-core`, `lombok`, `spring-boot-starter-test`.
+- Extract the generated zip into the existing repo, keeping the existing README, ARCHITECTURE.md, LICENSE, and architecture diagrams.
+- Use the included Maven Wrapper (`./mvnw`) — no need to install Maven globally.
 
-**Done when:** `./mvnw clean install` produces a JAR with no errors. `git status` is clean except for tracked source files.
+**Done when:** `./mvnw clean install -DskipTests` produces a JAR with no errors. `git status` is clean except for tracked source files.
 
 ---
 
@@ -38,7 +38,7 @@ Get Postgres and Redis running locally before writing application code. Trying t
 Define the data layer before the API. Schema changes are cheap now, expensive after the app is running against real data.
 
 **Tasks**
-- Create the JPA entity `User` (id, username, email, passwordHash, status enum, createdAt, updatedAt).
+- Create the JPA entity `User` (id, username, email, passwordHash, status enum, createdAt, updatedAt). Use a Java 21 `record` for read-only DTOs where appropriate.
 - Create the JPA entity `SecurityEvent` (id, userId, eventType, ipAddress, endpoint, statusCode, createdAt).
 - Create `UserRepository extends JpaRepository<User, Long>` and `SecurityEventRepository extends JpaRepository<SecurityEvent, Long>`.
 - Write Flyway migration `V1__init.sql` in `src/main/resources/db/migration/` with `CREATE TABLE` for both, indexes on `users.username` (unique), `security_events.user_id`, `security_events.created_at`.
@@ -53,7 +53,7 @@ Define the data layer before the API. Schema changes are cheap now, expensive af
 The minimum viable API surface — enough to demo and to be the target of rate limiting and brute-force detection in the next issue.
 
 **Tasks**
-- DTOs: `RegisterRequest` and `LoginRequest` with `@NotBlank` validation.
+- DTOs as records: `RegisterRequest` and `LoginRequest` with `@NotBlank` validation.
 - `UserService` with `register(RegisterRequest)` (bcrypt the password with `BCryptPasswordEncoder`, cost 12) and `authenticate(LoginRequest)` (returns boolean for now — JWT comes in week 2).
 - `AuthController` with `POST /api/register` and `POST /api/login`. Return 400 on validation errors, 409 if username taken, 401 on wrong password, 200 on success.
 - After every login attempt (success or failure), insert a `SecurityEvent` row with the outcome.
@@ -95,7 +95,7 @@ The second piece of the gateway, and the one that makes the project actually int
 Make the project runnable by anyone with one command. This is what a recruiter will actually test.
 
 **Tasks**
-- Write `docker/Dockerfile` using a multi-stage build: `eclipse-temurin:17-jdk-alpine` to build with Maven, `eclipse-temurin:17-jre-alpine` for the runtime image. Final image should be under 250 MB.
+- Write `docker/Dockerfile` using a multi-stage build: `eclipse-temurin:21-jdk-alpine` to build with Maven, `eclipse-temurin:21-jre-alpine` for the runtime image. Final image should be under 250 MB.
 - Update `docker-compose.yml` so `app` builds from this Dockerfile and depends on `postgres` and `redis` with healthchecks.
 - Take screenshots / record an asciinema of the demo flow (register → login → trigger block → see 403). Embed them in README.
 - Tag the commit: `git tag week-1 -m "Week 1: working monolith"` and `git push origin week-1`.

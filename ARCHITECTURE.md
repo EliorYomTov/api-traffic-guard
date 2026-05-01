@@ -25,6 +25,17 @@ A servlet filter runs before any controller. It performs three checks in order:
 
 If all three pass, the request reaches the controller. After the response, a separate component records the outcome (success / failure) for the detection service. Detection runs asynchronously — it never blocks the response.
 
+### Why Java 21?
+
+Java 21 is the latest LTS release (supported through 2031) and brings several features that matter for this project:
+
+- **Virtual threads (Project Loom).** A gateway is fundamentally I/O-bound — each request waits on Redis, Postgres, or a downstream service. Virtual threads let the JVM handle tens of thousands of concurrent requests without the memory cost of platform threads. This is exactly the workload the feature was designed for.
+- **Pattern matching for switch.** Cleaner code in the detection logic, where the same event can produce different actions based on type.
+- **Records.** Concise, immutable data carriers — perfect for DTOs and event objects.
+- **Sealed classes.** Stronger guarantees on event-type hierarchies.
+
+Java 17 would also have been a reasonable choice. Java 21 is preferred because there is no production constraint forcing an older version, and the language improvements compound across the codebase.
+
 ### Why a monolith, not microservices?
 
 This was a deliberate choice, not a default. A few reasons:
@@ -117,6 +128,21 @@ After this split, the system genuinely is a microservices architecture: a Gatewa
 ### Week 6+ — Frontend, CI/CD, Kubernetes
 
 These are operational concerns, not architectural ones. They turn the project from "code that runs locally" into "code that ships." Each is added when its absence becomes the limiting factor.
+
+### Phase 9+ — AWS production deployment
+
+After the Kubernetes manifests are in place locally, the project moves to AWS. The motivation: a real portfolio project should run somewhere reachable, not just on the developer's laptop.
+
+The migration is staged:
+
+- **EC2 / ECS** for compute. Container images built in Phase 7 deploy directly. ECS first (less operational overhead than EKS), with EKS as an option later if multi-cluster orchestration becomes relevant.
+- **RDS for PostgreSQL.** Managed Postgres with automated backups and replication. Removes the operational burden of running a database directly.
+- **ElastiCache for Redis.** Managed Redis cluster. Same reasoning — operating Redis at scale is its own discipline.
+- **S3 + CloudFront** for the React frontend (built in Week 6). Static asset hosting with a CDN in front; this is dramatically cheaper and faster than serving the bundle from the application server.
+- **CloudWatch + X-Ray** for production observability. The local Prometheus/Grafana setup from Week 3 stays for development; CloudWatch handles production.
+- **Terraform** for everything above. The infrastructure becomes versioned, reviewable, and reproducible — the same discipline applied to code.
+
+This phase converts a learning project into a deployed system. From a portfolio perspective, that distinction is significant: hiring managers see a live URL, not a docker-compose.yml.
 
 ## What this project is not trying to be
 

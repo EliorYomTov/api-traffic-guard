@@ -2,9 +2,8 @@
 
 > A real-time API protection layer that detects and mitigates abusive traffic — rate-limit violations and brute-force authentication attempts — before it reaches your services.
 
-[![Build](https://img.shields.io/badge/build-passing-success)]()
-[![Java](https://img.shields.io/badge/Java-17-orange)]()
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2-brightgreen)]()
+[![Java](https://img.shields.io/badge/Java-21-orange)]()
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4-brightgreen)]()
 [![License](https://img.shields.io/badge/license-MIT-blue)]()
 
 ---
@@ -30,7 +29,7 @@ This is the same problem space that companies like Imperva, Cloudflare, and Akam
 ## Quick start
 
 ```bash
-git clone https://github.com/<your-username>/api-traffic-guard.git
+git clone https://github.com/EliorYomTov/api-traffic-guard.git
 cd api-traffic-guard
 docker compose up -d
 ```
@@ -60,18 +59,30 @@ done
 
 ## Architecture
 
-![Architecture](./architecture-week1.png)
+The project is built incrementally. Two diagrams below show **where it is today** and **where it is heading**.
+
+### Current state (Week 1)
 
 The current architecture is a **deliberate monolith** — a single Spring Boot application backed by Redis (real-time counters and TTL blocks) and PostgreSQL (durable audit log). All security checks happen in a request filter before the controller is reached, so blocked traffic never touches business logic.
 
-The plan is to evolve this incrementally: add Kafka for asynchronous event streaming, then split high-load components into separate services only when there is a measurable reason to do so. See [ARCHITECTURE.md](./ARCHITECTURE.md) for the technical decisions and the rationale behind them.
+![Current Architecture](./architecture-current.png)
+
+This diagram is updated each week to reflect the actual state of the codebase. To see how the architecture looked at any past milestone, check out the corresponding Git tag (`week-1`, `week-2`, etc.).
+
+### Target state (post-Week 8)
+
+The plan is to evolve toward a microservices architecture with an event-driven backbone — but only when there is a measurable reason to add each piece. The diagram below shows the full vision at the end of the roadmap, **not the current state**.
+
+![Target Architecture](./architecture-target.png)
+
+The reasoning behind each addition — Kafka, microservices split, Kubernetes — is documented in [ARCHITECTURE.md](./ARCHITECTURE.md). The path between the two diagrams is the [Week 1–8 plan](./WEEK-1-PLAN.md).
 
 ## Tech stack
 
 | Layer | Technology | Why |
 |-------|-----------|-----|
-| Language | Java 17 (LTS) | Mature, strongly typed, supported until 2029 |
-| Framework | Spring Boot 3.2 | De-facto standard for Java backend services |
+| Language | Java 21 (LTS) | Latest LTS, virtual threads, modern language features |
+| Framework | Spring Boot 3.4 | De-facto standard for Java backend services |
 | Persistence | PostgreSQL 15 + Spring Data JPA | ACID, strong tooling, easy migrations with Flyway |
 | Cache | Redis 7 | Sub-millisecond reads for hot-path checks |
 | Security | Spring Security + JWT | Stateless authentication |
@@ -91,7 +102,16 @@ This is an active learning project. Each week adds a new layer with a documented
 - [ ] **Week 5** — Extract Detection service into a separate microservice
 - [ ] **Week 6** — Frontend dashboard (React + Vite) showing live stats
 - [ ] **Week 7** — CI/CD via GitHub Actions, Docker Hub publishing
-- [ ] **Week 8+** — Kubernetes manifests, Helm chart
+- [ ] **Week 8** — Kubernetes manifests, Helm chart
+
+### Future phases
+
+Beyond Week 8, the project will deploy to AWS:
+
+- **Phase 9** — AWS deployment: EC2 / ECS for compute, RDS for PostgreSQL, ElastiCache for Redis
+- **Phase 10** — S3 for static frontend hosting, CloudFront CDN, Route 53 DNS
+- **Phase 11** — Production observability: CloudWatch, AWS X-Ray for distributed tracing
+- **Phase 12** — Infrastructure as Code with Terraform
 
 Closed milestones are tagged in Git as `week-1`, `week-2`, etc., so any version of the project can be checked out and run.
 
@@ -111,8 +131,9 @@ api-traffic-guard/
 │   ├── Dockerfile
 │   └── docker-compose.yml
 ├── docs/
-│   ├── ARCHITECTURE.md              # technical decisions & rationale
-│   └── images/
+│   └── ARCHITECTURE.md              # technical decisions & rationale
+├── architecture-current.png         # current state — updated each week
+├── architecture-target.png          # roadmap vision — final architecture
 ├── pom.xml
 └── README.md
 ```
