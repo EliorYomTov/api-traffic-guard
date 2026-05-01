@@ -2,9 +2,8 @@
 
 > A real-time API protection layer that detects and mitigates abusive traffic — rate-limit violations and brute-force authentication attempts — before it reaches your services.
 
-[![Java](https://img.shields.io/badge/Java-21-orange)]()
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4-brightgreen)]()
-[![License](https://img.shields.io/badge/license-MIT-blue)]()
+[![Java](https://img.shields.io/badge/Java-21-orange?logo=openjdk)]()
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4-brightgreen?logo=spring)]()
 
 ---
 
