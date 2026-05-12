@@ -12,6 +12,7 @@ import com.trafficguard.exception.InvalidCredentialsException;
 import com.trafficguard.exception.UsernameAlreadyExistsException;
 import com.trafficguard.repository.SecurityEventRepository;
 import com.trafficguard.repository.UserRepository;
+import com.trafficguard.security.JwtService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -28,6 +29,7 @@ public class UserService {
     private final SecurityEventRepository securityEventRepository;
     private final PasswordEncoder passwordEncoder;
     private final SecurityEventService securityEventService;
+    private final JwtService jwtService;
 
     @Transactional
     public AuthResponse register(RegisterRequest request, String ipAddress) {
@@ -44,7 +46,8 @@ public class UserService {
         user.setStatus(Status.ACTIVE);
         User saved = userRepository.save(user);
         log.info("Registered new user: {}", saved.getUsername());
-        return AuthResponse.authenticated(saved.getUsername(), saved.getId());
+        String token = jwtService.generateToken(saved.getId(), saved.getUsername());
+        return AuthResponse.authenticated(saved.getUsername(), saved.getId(), token);
     }
 
     @Transactional
@@ -56,6 +59,7 @@ public class UserService {
         }
         securityEventService.recordEvent(user.getId(), EventType.LOGIN_SUCCESS, ipAddress, endpoint, 200);
         log.info("Successful login for user: {}", user.getUsername());
-        return AuthResponse.authenticated(user.getUsername(), user.getId());
+        String token = jwtService.generateToken(user.getId(), user.getUsername());
+        return AuthResponse.authenticated(user.getUsername(), user.getId(), token);
     }
 }
