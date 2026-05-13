@@ -3,7 +3,7 @@
 > A real-time API protection layer that detects and mitigates abusive traffic — rate-limit violations and brute-force authentication attempts — before it reaches your services.
 
 [![Java](https://img.shields.io/badge/Java-21-orange?logo=openjdk)]()
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4-brightgreen?logo=spring)]()
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5-brightgreen?logo=spring)]()
 
 ---
 
@@ -22,7 +22,7 @@ This is the same problem space that companies like Imperva, Cloudflare, and Akam
 - **TTL-based blocking** — temporary blocks that expire automatically; no manual cleanup
 - **Admin REST API** — unblock users, view live statistics, manage rate-limit rules at runtime
 - **Audit trail** — every security event persisted to PostgreSQL for analysis
-- **Production-ready observability** — Prometheus metrics, structured logging, Spring Actuator health checks
+- **Production-ready observability** — Prometheus metrics, Grafana dashboards, structured logging, Spring Actuator health checks
 - **Fully containerized** — `docker compose up` brings the entire system online
 
 ## Quick start
@@ -37,18 +37,18 @@ The service is available at `http://localhost:8080`. Try it:
 
 ```bash
 # Register a user
-curl -X POST http://localhost:8080/api/register \
+curl -X POST http://localhost:8080/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{"username": "alice", "password": "secret123"}'
 
 # Login successfully
-curl -X POST http://localhost:8080/api/login \
+curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username": "alice", "password": "secret123"}'
 
 # Trigger brute-force detection (run 11 times)
 for i in {1..11}; do
-  curl -X POST http://localhost:8080/api/login \
+  curl -X POST http://localhost:8080/api/auth/login \
     -H "Content-Type: application/json" \
     -d '{"username": "alice", "password": "wrong"}'
 done
@@ -58,45 +58,51 @@ done
 
 ## Architecture
 
-The project is built incrementally. Two diagrams below show **where it is today** and **where it is heading**.
+The project is built incrementally. The diagrams below show how the architecture evolved — each week adds a layer with a documented rationale.
 
-### Current state (Week 1)
+### Current state — Week 3: Observability + Rate Limiting + Brute-force Detection
 
-The current architecture is a **deliberate monolith** — a single Spring Boot application backed by Redis (real-time counters and TTL blocks) and PostgreSQL (durable audit log). All security checks happen in a request filter before the controller is reached, so blocked traffic never touches business logic.
+![Architecture Week 3](docs/architecture-week3.png)
 
-![Current Architecture](./architecture-current.png)
+The system now exposes Prometheus metrics via Spring Actuator, which Grafana scrapes for live dashboards. Rate limiting runs as a Redis-backed sliding-window counter. Brute-force detection tracks failed login attempts per user and per IP, blocking at configurable thresholds with automatic TTL expiration.
 
-This diagram is updated each week to reflect the actual state of the codebase. To see how the architecture looked at any past milestone, check out the corresponding Git tag (`week-1`, `week-2`, etc.).
+### Week 1 — Monolith Foundation
+
+![Architecture Week 1](docs/architecture-week1.png)
+
+The starting point: a single Spring Boot application backed by Redis (real-time counters and TTL blocks) and PostgreSQL (durable audit log). All security checks happen in a request filter before the controller is reached, so blocked traffic never touches business logic.
+
+> Architecture diagrams are updated each week to reflect the actual state of the codebase. Past milestones are tagged in Git (`week-1`, `week-2`, etc.) and can be checked out and run independently.
 
 ### Target state (post-Week 8)
 
-The plan is to evolve toward a microservices architecture with an event-driven backbone — but only when there is a measurable reason to add each piece. The diagram below shows the full vision at the end of the roadmap, **not the current state**.
+The plan is to evolve toward a microservices architecture with an event-driven backbone — but only when there is a measurable reason to add each piece.
 
-![Target Architecture](./architecture-target.png)
+![Target Architecture](docs/architecture-target.png)
 
-The reasoning behind each addition — Kafka, microservices split, Kubernetes — is documented in [ARCHITECTURE.md](./ARCHITECTURE.md). The path between the two diagrams is the [Week 1–8 plan](./WEEK-1-PLAN.md).
+The reasoning behind each addition — Kafka, microservices split, Kubernetes — is documented in [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 ## Tech stack
 
 | Layer | Technology | Why |
 |-------|-----------|-----|
 | Language | Java 21 (LTS) | Latest LTS, virtual threads, modern language features |
-| Framework | Spring Boot 3.4 | De-facto standard for Java backend services |
+| Framework | Spring Boot 3.5 | De-facto standard for Java backend services |
 | Persistence | PostgreSQL 15 + Spring Data JPA | ACID, strong tooling, easy migrations with Flyway |
 | Cache | Redis 7 | Sub-millisecond reads for hot-path checks |
-| Security | Spring Security + JWT | Stateless authentication |
+| Security | Spring Security + JWT (HMAC-SHA384) | Stateless authentication, Argon2id password hashing |
+| Observability | Micrometer + Prometheus + Grafana | Production-grade metrics and dashboards |
 | Testing | JUnit 5, Mockito, Testcontainers | Real DB and Redis in integration tests |
 | Build | Maven 3.9 | Standard for Java projects |
 | Container | Docker + Docker Compose | One-command local environment |
-| Observability | Spring Actuator + Prometheus | Production-grade metrics out of the box |
 
 ## Project status
 
 This is an active learning project. Each week adds a new layer with a documented rationale.
 
 - [x] **Week 1** — Monolith foundation: REST + Postgres + Redis + Docker Compose
-- [ ] **Week 2** — Spring Security + JWT, integration tests with Testcontainers
-- [ ] **Week 3** — Prometheus metrics, Grafana dashboard, structured logging
+- [x] **Week 2** — Spring Security + JWT, Argon2id hashing, integration tests with Testcontainers
+- [ ] **Week 3** — Prometheus metrics, Grafana dashboard, Rate limiting, Brute-force detection
 - [ ] **Week 4** — Kafka integration for async audit pipeline
 - [ ] **Week 5** — Extract Detection service into a separate microservice
 - [ ] **Week 6** — Frontend dashboard (React + Vite) showing live stats
@@ -130,9 +136,9 @@ api-traffic-guard/
 │   ├── Dockerfile
 │   └── docker-compose.yml
 ├── docs/
+│   ├── architecture-week1.png       # Week 1 — monolith foundation
+│   ├── architecture-week3.png       # Week 3 — current state
 │   └── ARCHITECTURE.md              # technical decisions & rationale
-├── architecture-current.png         # current state — updated each week
-├── architecture-target.png          # roadmap vision — final architecture
 ├── pom.xml
 └── README.md
 ```
