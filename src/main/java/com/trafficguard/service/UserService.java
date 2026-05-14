@@ -1,6 +1,8 @@
 package com.trafficguard.service;
 
+import com.trafficguard.domain.Plan;
 import com.trafficguard.domain.SecurityEvent.EventType;
+import com.trafficguard.domain.Tenant;
 import com.trafficguard.domain.User;
 import com.trafficguard.domain.User.Status;
 import com.trafficguard.dto.request.LoginRequest;
@@ -9,7 +11,6 @@ import com.trafficguard.dto.response.AuthResponse;
 import com.trafficguard.exception.EmailAlreadyExistsException;
 import com.trafficguard.exception.InvalidCredentialsException;
 import com.trafficguard.exception.UsernameAlreadyExistsException;
-import com.trafficguard.repository.SecurityEventRepository;
 import com.trafficguard.repository.UserRepository;
 import com.trafficguard.security.JwtService;
 import lombok.RequiredArgsConstructor;
@@ -24,10 +25,10 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
 
     private final UserRepository userRepository;
-    private final SecurityEventRepository securityEventRepository;
     private final PasswordEncoder passwordEncoder;
     private final SecurityEventService securityEventService;
     private final JwtService jwtService;
+    private final TenantService tenantService;
 
     @Transactional
     public AuthResponse register(RegisterRequest request, String ipAddress) {
@@ -37,13 +38,18 @@ public class UserService {
         if (userRepository.existsByEmail(request.email())) {
             throw new EmailAlreadyExistsException(request.email());
         }
-        User user = new User();
-        user.setUsername(request.username());
-        user.setEmail(request.email());
-        user.setPasswordHash(passwordEncoder.encode(request.password()));
-        user.setStatus(Status.ACTIVE);
+        // Every new registration gets its own FREE tenant
+        Tenant tenant = tenantService.createTenant(request.username(), Plan.FREE);
+        User user = User.builder()
+                .username(request.username())
+                .email(request.email())
+                .passwordHash(passwordEncoder.encode(request.password()))
+                .status(Status.ACTIVE)
+                .tenant(tenant)
+                .tenantRole(User.TenantRole.OWNER)
+                .build();
         User saved = userRepository.save(user);
-        log.info("Registered new user: {}", saved.getUsername());
+        log.info("Registered new user: {} tenant: {}", saved.getUsername(), tenant.getId());
         String token = jwtService.generateToken(saved.getId(), saved.getUsername());
         return AuthResponse.authenticated(saved.getUsername(), saved.getId(), token);
     }
