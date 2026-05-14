@@ -1,16 +1,17 @@
 package com.trafficguard.controller;
 
 import com.trafficguard.domain.Tenant;
-import com.trafficguard.domain.User;
 import com.trafficguard.dto.request.CreateApiKeyRequest;
 import com.trafficguard.dto.response.ApiKeyResponse;
+import com.trafficguard.repository.TenantRepository;
 import com.trafficguard.repository.UserRepository;
+import com.trafficguard.security.TenantPrincipal;
 import com.trafficguard.service.ApiKeyService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.*;
@@ -24,14 +25,11 @@ public class ApiKeyController {
 
     private final ApiKeyService apiKeyService;
     private final UserRepository userRepository;
+    private final TenantRepository tenantRepository;
 
-    /**
-     * Creates a new API key for the authenticated user's tenant.
-     * The plaintext key is returned exactly once in the response.
-     */
     @PostMapping
-    public ResponseEntity<ApiKeyResponse> createKey(@AuthenticationPrincipal UserDetails principal, @Valid @RequestBody CreateApiKeyRequest request) {
-        Tenant tenant = resolveTenant(principal);
+    public ResponseEntity<ApiKeyResponse> createKey(@Valid @RequestBody CreateApiKeyRequest request) {
+        Tenant tenant = resolveTenant();
         ApiKeyService.PlaintextApiKey result = apiKeyService.generateKey(tenant, request.name());
         ApiKeyResponse response = ApiKeyResponse.withPlaintext(
                 apiKeyService.listKeys(tenant.getId())
@@ -39,17 +37,14 @@ public class ApiKeyController {
                         .filter(k -> k.getId().equals(result.keyId()))
                         .findFirst()
                         .orElseThrow(),
-                result.plaintext());
+                result.plaintext()
+        );
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    /**
-     * Lists all API keys for the authenticated user's tenant.
-     * Never returns plaintext.
-     */
     @GetMapping
-    public ResponseEntity<List<ApiKeyResponse>> listKeys(@AuthenticationPrincipal UserDetails principal) {
-        Tenant tenant = resolveTenant(principal);
+    public ResponseEntity<List<ApiKeyResponse>> listKeys() {
+        Tenant tenant = resolveTenant();
         List<ApiKeyResponse> keys = apiKeyService.listKeys(tenant.getId())
                 .stream()
                 .map(ApiKeyResponse::from)
@@ -57,13 +52,9 @@ public class ApiKeyController {
         return ResponseEntity.ok(keys);
     }
 
-    /**
-     * Revokes an API key by id.
-     * The key must belong to the authenticated user's tenant.
-     */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> revokeKey(@AuthenticationPrincipal UserDetails principal, @PathVariable Long id) {
-        Tenant tenant = resolveTenant(principal);
+    public ResponseEntity<Void> revokeKey(@PathVariable Long id) {
+        Tenant tenant = resolveTenant();
         apiKeyService.revokeKey(id, tenant.getId());
         return ResponseEntity.noContent().build();
     }
@@ -71,10 +62,17 @@ public class ApiKeyController {
     // ------------------------------------------------------------------
     // Private helpers
     // ------------------------------------------------------------------
-    private Tenant resolveTenant(UserDetails principal) {
-        User user = userRepository.findByUsername(principal.getUsername())
-                .orElseThrow(() -> new UsernameNotFoundException(
-                        "User not found: " + principal.getUsername()));
-        return user.getTenant();
+    private Tenant resolveTenant() {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication.getPrincipal() instanceof TenantPrincipal tenantPrincipal) {
+            return tenantRepository.getReferenceById(tenantPrincipal.getTenantId());
+        }
+        if (authentication.getPrincipal() instanceof UserDetails userDetails) {
+            return userRepository.findByUsername(userDetails.getUsername())
+                    .orElseThrow(() -> new UsernameNotFoundException(
+                            "User not found: " + userDetails.getUsername()))
+                    .getTenant();
+        }
+        throw new IllegalStateException("Unknown principal type");
     }
 }

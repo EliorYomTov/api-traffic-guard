@@ -1,6 +1,7 @@
 package com.trafficguard.config;
 
 import com.trafficguard.repository.UserRepository;
+import com.trafficguard.security.ApiKeyAuthFilter;
 import com.trafficguard.security.JwtAuthenticationFilter;
 import com.trafficguard.security.RateLimitFilter;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final ApiKeyAuthFilter apiKeyAuthFilter;
     private final UserRepository userRepository;
     private final RateLimitFilter rateLimitFilter;
 
@@ -46,6 +48,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/api-keys/**").authenticated()
                         .anyRequest().authenticated())
+                .addFilterBefore(apiKeyAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(rateLimitFilter, JwtAuthenticationFilter.class);
         return http.build();

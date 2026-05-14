@@ -35,20 +35,16 @@ public class RateLimitService {
     }
 
     /**
-     * Sliding window counter using Redis Sorted Set.
-     * Key: rate_limit:<clientId>
-     * Members: unique request IDs
-     * Score: epoch milliseconds
-     *
-     * @return true if request is allowed, false if rate limit exceeded
+     * Sliding window check with a dynamic limit (e.g. per-tenant plan).
+     * Falls back to the same Redis key structure as isAllowed(clientId).
      */
-    public boolean isAllowed(String clientId) {
+    public boolean isAllowed(String clientId, int limit) {
         String key = "rate_limit:" + clientId;
         long nowMs = Instant.now().toEpochMilli();
         long windowStartMs = nowMs - (windowSeconds * 1000L);
         redis.opsForZSet().removeRangeByScore(key, 0, windowStartMs);
         Long count = redis.opsForZSet().zCard(key);
-        if (count != null && count >= requestsPerWindow) {
+        if (count != null && count >= limit) {
             blockedCounter.increment();
             return false;
         }
