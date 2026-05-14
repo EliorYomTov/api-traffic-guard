@@ -38,4 +38,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(Map.of("error", message));
     }
+
+    @ExceptionHandler(com.trafficguard.service.ApiKeyService.ApiKeyNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleApiKeyNotFound(
+            com.trafficguard.service.ApiKeyService.ApiKeyNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(com.trafficguard.service.TenantService.TenantNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleTenantNotFound(
+            com.trafficguard.service.TenantService.TenantNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", ex.getMessage()));
+    }
 }
