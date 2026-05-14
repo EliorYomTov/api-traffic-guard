@@ -43,6 +43,7 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**", "/actuator/**").permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")  // ← חדש
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(rateLimitFilter, JwtAuthenticationFilter.class);
@@ -55,7 +56,7 @@ public class SecurityConfig {
                 .map(user -> org.springframework.security.core.userdetails.User
                         .withUsername(user.getUsername())
                         .password(user.getPasswordHash())
-                        .roles("USER")
+                        .roles(user.getRole().name())  // ← מה-DB במקום hardcoded "USER"
                         .build())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
     }

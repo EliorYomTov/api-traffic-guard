@@ -10,9 +10,9 @@ import java.time.Instant;
 /**
  * A user account in the system.
  * <p>
- * Passwords are stored as bcrypt hashes (never plaintext). The status field
- * controls whether the account can authenticate, separately from any
- * temporary blocks tracked in Redis.
+ * Passwords are stored as Argon2id hashes (never plaintext).
+ * role        — platform-level access (USER / ADMIN).
+ * tenant_role — access level within the user's tenant (OWNER / MEMBER).
  */
 @Entity
 @Table(name = "users")
@@ -21,7 +21,7 @@ import java.time.Instant;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@ToString(exclude = "passwordHash")  // never log the password hash
+@ToString(exclude = "passwordHash")
 public class User {
 
     @Id
@@ -41,6 +41,20 @@ public class User {
     @Column(nullable = false, length = 20)
     private Status status;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private Role role = Role.USER;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "tenant_id", nullable = false)
+    private Tenant tenant;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tenant_role", nullable = false, length = 20)
+    @Builder.Default
+    private TenantRole tenantRole = TenantRole.OWNER;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -51,5 +65,13 @@ public class User {
 
     public enum Status {
         ACTIVE, LOCKED, DELETED
+    }
+
+    public enum Role {
+        USER, ADMIN
+    }
+
+    public enum TenantRole {
+        OWNER, MEMBER
     }
 }

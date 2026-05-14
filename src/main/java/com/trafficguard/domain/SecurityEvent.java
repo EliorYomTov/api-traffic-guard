@@ -10,7 +10,7 @@ import java.time.Instant;
  * An append-only record of a security-relevant event in the system.
  * <p>
  * Events are never modified after creation — this is an audit log.
- * The user_id is nullable so anonymous events (e.g. attacks from unknown IPs)
+ * user_id is nullable so anonymous events (e.g. attacks from unknown IPs)
  * can still be recorded.
  */
 @Entity
@@ -20,13 +20,16 @@ import java.time.Instant;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@ToString  // ipAddress included intentionally for security debugging.
-// In production-grade GDPR contexts, consider masking.
+@ToString
 public class SecurityEvent {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "tenant_id", nullable = false)
+    private Tenant tenant;
 
     @Column(name = "user_id")
     private Long userId;
