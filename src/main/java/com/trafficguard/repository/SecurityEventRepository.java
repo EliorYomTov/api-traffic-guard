@@ -2,6 +2,7 @@ package com.trafficguard.repository;
 
 import com.trafficguard.domain.SecurityEvent;
 import com.trafficguard.domain.SecurityEvent.EventType;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -20,4 +21,8 @@ public interface SecurityEventRepository extends JpaRepository<SecurityEvent, Lo
     long countByUserIdAndEventTypeAndCreatedAtAfter(Long userId, EventType eventType, Instant after);
 
     long countByIpAddressAndEventTypeAndCreatedAtAfter(String ipAddress, EventType eventType, Instant after);
+
+    List<SecurityEvent> findByEventTypeAndCreatedAtAfterOrderByCreatedAtDesc(EventType eventType, Instant after);
+
+    List<SecurityEvent> findAllByOrderByCreatedAtDesc(Pageable pageable);
 }
