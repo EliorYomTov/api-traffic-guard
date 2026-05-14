@@ -1,21 +1,28 @@
 import { useEffect, useState } from 'react';
-import type { ApiKey } from '../api/types';
+import type { ApiKey, TenantInfo } from '../api/types';
 import client from '../api/client';
 
 interface Props { onLogout: () => void; }
 
+const PLAN_COLORS = { FREE: '#6366f1', PRO: '#22c55e', ENTERPRISE: '#f59e0b' };
+
 export default function DashboardPage({ onLogout }: Props) {
     const username = localStorage.getItem('username') || 'User';
     const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
+    const [tenant, setTenant] = useState<TenantInfo | null>(null);
     const [newKeyName, setNewKeyName] = useState('');
     const [newKeyPlaintext, setNewKeyPlaintext] = useState('');
     const [creating, setCreating] = useState(false);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        client.get<ApiKey[]>('/api/v1/api-keys')
-            .then(res => setApiKeys(res.data))
-            .catch(console.error)
+        Promise.all([
+            client.get<ApiKey[]>('/api/v1/api-keys'),
+            client.get<TenantInfo>('/api/v1/tenant/me'),
+        ]).then(([keysRes, tenantRes]) => {
+            setApiKeys(keysRes.data);
+            setTenant(tenantRes.data);
+        }).catch(console.error)
             .finally(() => setLoading(false));
     }, []);
 
@@ -48,6 +55,9 @@ export default function DashboardPage({ onLogout }: Props) {
         </div>
     );
 
+    const plan = tenant?.plan ?? 'FREE';
+    const rateLimit = tenant?.rateLimitPerMinute ?? 60;
+
     return (
         <div style={{ display: 'flex', minHeight: '100vh' }}>
 
@@ -77,7 +87,6 @@ export default function DashboardPage({ onLogout }: Props) {
             <main style={{ flex: 1, padding: 32, overflowY: 'auto' }}>
                 <div style={{ maxWidth: 900 }}>
 
-                    {/* Header */}
                     <div style={{ marginBottom: 32 }}>
                         <h1 style={{ fontSize: 22, fontWeight: 600 }}>Overview</h1>
                         <p style={{ color: 'var(--text-muted)', marginTop: 4 }}>Manage your API keys and monitor traffic</p>
@@ -88,14 +97,16 @@ export default function DashboardPage({ onLogout }: Props) {
                         <div>
                             <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>PLAN</div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <span style={{ fontWeight: 600, fontSize: 18 }}>FREE</span>
-                                <span style={{ background: '#6366f1', color: 'white', fontSize: 11, padding: '2px 8px', borderRadius: 999, fontWeight: 600 }}>FREE</span>
+                                <span style={{ fontWeight: 600, fontSize: 18 }}>{plan}</span>
+                                <span style={{ background: PLAN_COLORS[plan] ?? '#6366f1', color: 'white', fontSize: 11, padding: '2px 8px', borderRadius: 999, fontWeight: 600 }}>
+                  {plan}
+                </span>
                             </div>
                         </div>
                         <div style={{ width: 1, height: 36, background: 'var(--border)' }} />
                         <div>
                             <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>RATE LIMIT</div>
-                            <div style={{ fontWeight: 600, fontSize: 18 }}>60 <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 400 }}>req/min</span></div>
+                            <div style={{ fontWeight: 600, fontSize: 18 }}>{rateLimit} <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 400 }}>req/min</span></div>
                         </div>
                         <div style={{ width: 1, height: 36, background: 'var(--border)' }} />
                         <div>

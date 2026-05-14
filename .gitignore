@@ -37,4 +37,7 @@ application-secret.yml
 !.mvn/wrapper/maven-wrapper.jar
 
 # Spring Boot devtools
-.attach_pid*
+.attach_pid*node_modules/
+package-lock.json
+package.json
+
