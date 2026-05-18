@@ -50,6 +50,8 @@ management:
 logging:
   level:
     com.trafficguard: DEBUG
+    com.trafficguard.security: TRACE
+    org.springframework.security: DEBUG
     org.springframework: INFO
     org.hibernate.SQL: DEBUG
     org.hibernate.orm.connections.pooling: WARN

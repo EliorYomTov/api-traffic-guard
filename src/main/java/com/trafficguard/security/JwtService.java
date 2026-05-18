@@ -21,10 +21,17 @@ public class JwtService {
     @Value("${app.jwt.expiration}")
     private long expiration;
 
-    public String generateToken(Long userId, String username) {
+    /**
+     * Generates a JWT with userId, tenantId, and rateLimitPerMinute as claims.
+     * tenantId is required so JwtAuthenticationFilter can reconstruct
+     * a TenantPrincipal without a DB call on every request.
+     */
+    public String generateToken(Long userId, String username, Long tenantId, int rateLimitPerMinute) {
         return Jwts.builder()
                 .subject(username)
-                .claim("userId", userId)
+                .claim("userId",             userId)
+                .claim("tenantId",           tenantId)
+                .claim("rateLimitPerMinute", rateLimitPerMinute)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(getSigningKey())
@@ -37,6 +44,15 @@ public class JwtService {
 
     public Long extractUserId(String token) {
         return extractClaims(token).get("userId", Long.class);
+    }
+
+    public Long extractTenantId(String token) {
+        return extractClaims(token).get("tenantId", Long.class);
+    }
+
+    public int extractRateLimitPerMinute(String token) {
+        Integer value = extractClaims(token).get("rateLimitPerMinute", Integer.class);
+        return value != null ? value : 60; // safe fallback
     }
 
     public boolean isTokenValid(String token) {

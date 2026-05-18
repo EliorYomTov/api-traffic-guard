@@ -24,11 +24,11 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class UserService {
 
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final UserRepository       userRepository;
+    private final PasswordEncoder      passwordEncoder;
     private final SecurityEventService securityEventService;
-    private final JwtService jwtService;
-    private final TenantService tenantService;
+    private final JwtService           jwtService;
+    private final TenantService        tenantService;
 
     @Transactional
     public AuthResponse register(RegisterRequest request, String ipAddress) {
@@ -38,7 +38,6 @@ public class UserService {
         if (userRepository.existsByEmail(request.email())) {
             throw new EmailAlreadyExistsException(request.email());
         }
-        // Every new registration gets its own FREE tenant
         Tenant tenant = tenantService.createTenant(request.username(), Plan.FREE);
         User user = User.builder()
                 .username(request.username())
@@ -50,7 +49,7 @@ public class UserService {
                 .build();
         User saved = userRepository.save(user);
         log.info("Registered new user: {} tenant: {}", saved.getUsername(), tenant.getId());
-        String token = jwtService.generateToken(saved.getId(), saved.getUsername());
+        String token = jwtService.generateToken(saved.getId(), saved.getUsername(), tenant.getId(), tenant.getRateLimitPerMinute());
         return AuthResponse.authenticated(saved.getUsername(), saved.getId(), token);
     }
 
@@ -58,12 +57,25 @@ public class UserService {
     public AuthResponse login(LoginRequest request, String ipAddress, String endpoint) {
         User user = userRepository.findByUsername(request.username()).orElse(null);
         if (user == null || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
-            securityEventService.recordEvent(null, EventType.LOGIN_FAILURE, ipAddress, endpoint, 401);
+            // If user exists but wrong password — scope the event to their real tenant.
+            // If username unknown — fall back to default tenant (no tenant to scope to).
+            if (user != null) {
+                securityEventService.recordEvent(
+                        user.getTenant(), user.getId(),
+                        EventType.LOGIN_FAILURE, ipAddress, endpoint, 401);
+            } else {
+                securityEventService.recordEvent(
+                        null, EventType.LOGIN_FAILURE, ipAddress, endpoint, 401);
+            }
             throw new InvalidCredentialsException();
         }
-        securityEventService.recordEvent(user.getId(), EventType.LOGIN_SUCCESS, ipAddress, endpoint, 200);
+
+        Tenant tenant = user.getTenant();
+        securityEventService.recordEvent(
+                tenant, user.getId(),
+                EventType.LOGIN_SUCCESS, ipAddress, endpoint, 200);
         log.info("Successful login for user: {}", user.getUsername());
-        String token = jwtService.generateToken(user.getId(), user.getUsername());
+        String token = jwtService.generateToken(user.getId(), user.getUsername(), tenant.getId(), tenant.getRateLimitPerMinute());
         return AuthResponse.authenticated(user.getUsername(), user.getId(), token);
     }
 }
