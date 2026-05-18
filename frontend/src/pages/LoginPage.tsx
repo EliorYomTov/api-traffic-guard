@@ -22,7 +22,7 @@ export default function LoginPage({ onLogin }: Props) {
     setError('')
     setLoading(true)
     try {
-      const url  = mode === 'login' ? '/api/auth/login' : '/api/auth/register'
+      const url = mode === 'login' ? '/api/v1/auth/login' : '/api/v1/auth/register'
       const body = mode === 'login' ? { username, password } : { username, email, password }
       const { data } = await client.post<AuthResponse>(url, body)
       localStorage.setItem('token', data.token)

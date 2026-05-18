@@ -44,7 +44,7 @@ export default function DualBarChart({ data }: Props) {
                 },
                 scales: {
                     x: { grid: { display: false }, ticks: { color: '#475569', font: { size: 10 } }, border: { display: false } },
-                    y: { grid: { color: 'rgba(31,42,68,0.5)' }, ticks: { color: '#475569', font: { size: 10 }, callback: v => Number(v) >= 1000 ? (Number(v)/1000).toFixed(0)+'K' : v }, border: { display: false }, max: 22000 },
+                    y: { grid: { color: 'rgba(31,42,68,0.5)' }, ticks: { color: '#475569', font: { size: 10 }, callback: v => Number(v) >= 1000 ? (Number(v)/1000).toFixed(0)+'K' : v }, border: { display: false }},
                 },
             },
         })

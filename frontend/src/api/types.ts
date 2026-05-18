@@ -60,3 +60,86 @@ export interface EventsQueryParams {
     severity?:  'CRITICAL' | 'WARNING' | 'SUCCESS' | 'INFO';
     eventType?: string;
 }
+
+export type TimeRangeCode = '24h' | '7d' | '30d';
+
+export interface OverviewResponse {
+    totalRequests: number;
+    totalRequestsDelta: number | null;
+    blockedRequests: number;
+    blockedRequestsDelta: number | null;
+    rateLimitHits: number;
+    rateLimitHitsDelta: number | null;
+    avgResponseTimeMs: number | null;
+    range: TimeRangeCode;
+}
+
+export interface TimeseriesDataPoint {
+    label: string;
+    allowed: number;
+    blocked: number;
+}
+
+export interface TimeseriesResponse {
+    range: TimeRangeCode;
+    points: TimeseriesDataPoint[];
+}
+
+export interface StatusCodeBucket {
+    label: string;
+    count: number;
+    pct: number;
+    color: string;
+}
+
+export interface StatusCodesResponse {
+    range: TimeRangeCode;
+    total: number;
+    buckets: StatusCodeBucket[];
+}
+
+export interface TopEndpointEntry {
+    path: string;
+    count: number;
+}
+
+export interface TopEndpointsResponse {
+    range: TimeRangeCode;
+    endpoints: TopEndpointEntry[];
+}
+
+export interface ThreatDataPoint {
+    label: string;
+    bruteForce: number;
+    rateLimit: number;
+    badKey: number;
+}
+
+export interface ThreatCompositionResponse {
+    range: TimeRangeCode;
+    points: ThreatDataPoint[];
+}
+
+export interface BlockedIpEntry {
+    ipAddress: string;
+    attempts: number;
+}
+
+export interface TopBlockedIpsResponse {
+    range: TimeRangeCode;
+    ips: BlockedIpEntry[];
+}
+
+export interface BlockedIpEntry {
+    ipAddress: string;
+    attempts: number;
+    eventType: string;
+}
+
+export interface RateLimitUsageResponse {
+    used: number;
+    limit: number;
+    remaining: number;
+    pct: number;
+    resetsInSec: number;
+}

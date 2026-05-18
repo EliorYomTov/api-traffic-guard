@@ -45,23 +45,39 @@ export default function KpiCard({ label, value, delta, trend, color, subtitle, i
     const deltaIcon   = delta > 0 ? '▲' : '▼'
 
     return (
-        <div style={{ background: '#111a2e', border: '1px solid #1f2a44', borderRadius: 10, padding: 14 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+        <div style={{background: '#111a2e', border: '1px solid #1f2a44', borderRadius: 10, padding: 14, overflow: 'hidden'}}>
+            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8}}>
                 <div>
-                    <div style={{ color: '#94a3b8', fontSize: 11, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <div style={{
+                        color: '#94a3b8',
+                        fontSize: 11,
+                        marginBottom: 4,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 5
+                    }}>
                         {icon}
                         {label}
                     </div>
-                    <div style={{ color: 'white', fontSize: 22, fontWeight: 500 }}>{value}</div>
+                    <div style={{color: 'white', fontSize: 22, fontWeight: 500}}>{value}</div>
                 </div>
-                <div style={{ color: deltaColor, fontSize: 10, background: deltaColor + '22', padding: '2px 6px', borderRadius: 4, display: 'flex', alignItems: 'center', gap: 2 }}>
+                <div style={{
+                    color: deltaColor,
+                    fontSize: 10,
+                    background: deltaColor + '22',
+                    padding: '2px 6px',
+                    borderRadius: 4,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 2
+                }}>
                     {deltaIcon} {Math.abs(delta)}%
                 </div>
             </div>
-            <div style={{ height: 36, position: 'relative' }}>
-                <canvas ref={canvasRef} />
+            <div style={{height: 36, position: 'relative'}}>
+                <canvas ref={canvasRef}/>
             </div>
-            <div style={{ color: '#64748b', fontSize: 10, marginTop: 4 }}>{subtitle}</div>
+            <div style={{color: '#64748b', fontSize: 10, marginTop: 4}}>{subtitle}</div>
         </div>
     )
 }

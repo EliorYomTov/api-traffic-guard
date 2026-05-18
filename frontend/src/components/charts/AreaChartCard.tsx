@@ -4,7 +4,14 @@ Chart.register(...registerables)
 
 interface DataPoint { month: string; allowed: number; blocked: number }
 
-interface Props { data: DataPoint[] }
+interface Props {
+    data: DataPoint[]
+    total?: number
+    delta?: number | null
+    subtitle?: string
+    onRangeChange?: (range: '30d' | '7d' | '24h') => void
+    activeRange?: '30d' | '7d' | '24h'
+}
 
 const glowPlugin = {
     id: 'glowDot',
@@ -28,7 +35,26 @@ const glowPlugin = {
     }
 }
 
-export default function AreaChartCard({ data }: Props) {
+const TABS: { label: string; range: '30d' | '7d' | '24h' }[] = [
+    { label: 'Month', range: '30d' },
+    { label: 'Week',  range: '7d'  },
+    { label: 'Day',   range: '24h' },
+]
+
+function fmt(n: number): string {
+    if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M'
+    if (n >= 1_000)     return (n / 1_000).toFixed(1) + 'K'
+    return n.toLocaleString()
+}
+
+export default function AreaChartCard({
+                                          data,
+                                          total,
+                                          delta,
+                                          subtitle = 'last 7 days',
+                                          onRangeChange,
+                                          activeRange = '7d',
+                                      }: Props) {
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const chartRef  = useRef<Chart | null>(null)
 
@@ -82,12 +108,17 @@ export default function AreaChartCard({ data }: Props) {
                 interaction: { mode: 'index', intersect: false },
                 scales: {
                     x: { grid: { display: false }, ticks: { color: '#475569', font: { size: 10 } }, border: { display: false } },
-                    y: { grid: { color: 'rgba(31,42,68,0.6)' }, ticks: { color: '#475569', font: { size: 10 }, callback: v => v === 0 ? '0K' : (Number(v) / 1000) + 'K' }, border: { display: false } },
+                    y: { grid: { color: 'rgba(31,42,68,0.6)' }, ticks: { color: '#475569', font: { size: 10 }, callback: v => v === 0 ? '0' : fmt(Number(v)) }, border: { display: false } },
                 },
             },
         })
         return () => chartRef.current?.destroy()
     }, [data])
+
+    const deltaColor    = delta == null ? '#94a3b8' : delta >= 0 ? '#22c55e' : '#ef4444'
+    const deltaArrow    = delta == null ? '' : delta >= 0 ? '▲ ' : '▼ '
+    const deltaText     = delta == null ? '—' : `${deltaArrow}${Math.abs(delta)}%`
+    const deltaBg       = delta == null ? 'rgba(148,163,184,0.15)' : delta >= 0 ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)'
 
     return (
         <div style={{ background: '#111a2e', border: '1px solid #1f2a44', borderRadius: 10, padding: 18 }}>
@@ -95,24 +126,39 @@ export default function AreaChartCard({ data }: Props) {
                 <div>
                     <div style={{ color: 'white', fontSize: 14, fontWeight: 500 }}>Request volume</div>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 6 }}>
-                        <div style={{ color: 'white', fontSize: 24, fontWeight: 500 }}>60,847</div>
-                        <div style={{ color: '#22c55e', fontSize: 11, background: 'rgba(34,197,94,0.15)', padding: '2px 6px', borderRadius: 4 }}>▲ 12.6%</div>
+                        <div style={{ color: 'white', fontSize: 24, fontWeight: 500 }}>
+                            {total != null ? fmt(total) : '—'}
+                        </div>
+                        <div style={{ color: deltaColor, fontSize: 11, background: deltaBg, padding: '2px 6px', borderRadius: 4 }}>
+                            {deltaText}
+                        </div>
                     </div>
-                    <div style={{ color: '#64748b', fontSize: 11, marginTop: 4 }}>Annual view</div>
+                    <div style={{ color: '#64748b', fontSize: 11, marginTop: 4 }}>{subtitle}</div>
                 </div>
                 <div style={{ display: 'flex', background: '#0b1220', border: '1px solid #1f2a44', borderRadius: 6, padding: 2 }}>
-                    {['Year','Month','Week','Day'].map((t, i) => (
-                        <div key={t} style={{ padding: '4px 10px', fontSize: 11, color: i === 0 ? 'white' : '#94a3b8', background: i === 0 ? '#3b82f6' : 'transparent', borderRadius: 4 }}>{t}</div>
+                    {TABS.map(t => (
+                        <div
+                            key={t.range}
+                            onClick={() => onRangeChange?.(t.range)}
+                            style={{
+                                padding: '4px 10px', fontSize: 11, borderRadius: 4,
+                                color:      activeRange === t.range ? 'white' : '#94a3b8',
+                                background: activeRange === t.range ? '#3b82f6' : 'transparent',
+                                cursor: onRangeChange ? 'pointer' : 'default',
+                            }}
+                        >
+                            {t.label}
+                        </div>
                     ))}
                 </div>
             </div>
             <div style={{ display: 'flex', gap: 14, marginBottom: 10, fontSize: 11 }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#94a3b8' }}>
-          <span style={{ width: 24, height: 2, background: '#3b82f6', display: 'inline-block', borderRadius: 2 }} />Allowed
-        </span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#94a3b8' }}>
-          <span style={{ width: 24, height: 2, background: 'rgba(148,163,184,0.6)', display: 'inline-block', borderRadius: 2 }} />Blocked
-        </span>
+                    <span style={{ width: 24, height: 2, background: '#3b82f6', display: 'inline-block', borderRadius: 2 }} />Allowed
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#94a3b8' }}>
+                    <span style={{ width: 24, height: 2, background: 'rgba(148,163,184,0.6)', display: 'inline-block', borderRadius: 2 }} />Blocked
+                </span>
             </div>
             <div style={{ position: 'relative', width: '100%', height: 230 }}>
                 <canvas ref={canvasRef} />

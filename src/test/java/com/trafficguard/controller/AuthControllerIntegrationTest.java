@@ -40,7 +40,7 @@ class AuthControllerIntegrationTest {
 
     @Test
     void register_shouldReturn201_withValidRequest() throws Exception {
-        mockMvc.perform(post("/api/auth/register")
+        mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -57,7 +57,7 @@ class AuthControllerIntegrationTest {
     @Test
     void login_shouldReturn200_withValidCredentials() throws Exception {
         // Register the user first, then attempt login
-        mockMvc.perform(post("/api/auth/register")
+        mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -68,7 +68,7 @@ class AuthControllerIntegrationTest {
                                 """))
                 .andExpect(status().isCreated());
 
-        mockMvc.perform(post("/api/auth/login")
+        mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -83,7 +83,7 @@ class AuthControllerIntegrationTest {
     @Test
     void login_shouldReturn401_withWrongPassword() throws Exception {
         // Register the user first, then attempt login with incorrect password
-        mockMvc.perform(post("/api/auth/register")
+        mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -94,7 +94,7 @@ class AuthControllerIntegrationTest {
                                 """))
                 .andExpect(status().isCreated());
 
-        mockMvc.perform(post("/api/auth/login")
+        mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -109,7 +109,7 @@ class AuthControllerIntegrationTest {
     @Test
     void register_shouldReturn409_whenUsernameExists() throws Exception {
         // Register the same username twice — second attempt must be rejected
-        mockMvc.perform(post("/api/auth/register")
+        mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -120,7 +120,7 @@ class AuthControllerIntegrationTest {
                                 """))
                 .andExpect(status().isCreated());
 
-        mockMvc.perform(post("/api/auth/register")
+        mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {

@@ -81,7 +81,7 @@ export default function StackedAreaChart({ data }: Props) {
                     ))}
                 </div>
             </div>
-            <div style={{ position: 'relative', height: 200, marginTop: 14 }}>
+            <div style={{ position: 'relative', height: 320, marginTop: 14 }}>
                 <canvas ref={canvasRef} />
             </div>
         </div>

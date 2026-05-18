@@ -5,9 +5,12 @@ import com.trafficguard.domain.SecurityEvent.EventType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 
 @Repository
@@ -55,4 +58,79 @@ public interface SecurityEventRepository extends JpaRepository<SecurityEvent, Lo
      * Count of events per tenant — used for the badge counter in the sidebar.
      */
     long countByTenantId(Long tenantId);
+
+    // === Metrics aggregations ===
+
+    @Query("""
+            SELECT COUNT(e) FROM SecurityEvent e
+            WHERE e.tenant.id = :tenantId
+              AND e.createdAt >= :since
+              AND e.createdAt < :until
+            """)
+    long countByTenantInRange(
+            @Param("tenantId") Long tenantId,
+            @Param("since") Instant since,
+            @Param("until") Instant until);
+
+    @Query("""
+            SELECT COUNT(e) FROM SecurityEvent e
+            WHERE e.tenant.id = :tenantId
+              AND e.eventType IN :types
+              AND e.createdAt >= :since
+              AND e.createdAt < :until
+            """)
+    long countByTenantAndTypesInRange(
+            @Param("tenantId") Long tenantId,
+            @Param("types") Collection<SecurityEvent.EventType> types,
+            @Param("since") Instant since,
+            @Param("until") Instant until);
+
+    @Query("""
+            SELECT FLOOR(e.statusCode / 100) * 100 AS bucket,
+                   COUNT(e) AS cnt
+            FROM SecurityEvent e
+            WHERE e.tenant.id = :tenantId
+              AND e.statusCode IS NOT NULL
+              AND e.createdAt >= :since
+              AND e.createdAt < :until
+            GROUP BY FLOOR(e.statusCode / 100) * 100
+            ORDER BY FLOOR(e.statusCode / 100) * 100
+            """)
+    List<Object[]> countByStatusCodeBucketInRange(
+            @Param("tenantId") Long tenantId,
+            @Param("since") Instant since,
+            @Param("until") Instant until);
+
+    @Query("""
+            SELECT e.endpoint, COUNT(e)
+            FROM SecurityEvent e
+            WHERE e.tenant.id = :tenantId
+              AND e.endpoint IS NOT NULL
+              AND e.createdAt >= :since
+              AND e.createdAt < :until
+            GROUP BY e.endpoint
+            ORDER BY COUNT(e) DESC
+            """)
+    List<Object[]> findTopEndpointsInRange(
+            @Param("tenantId") Long tenantId,
+            @Param("since") Instant since,
+            @Param("until") Instant until,
+            Pageable pageable);
+
+    @Query("""
+            SELECT e.ipAddress, COUNT(e)
+            FROM SecurityEvent e
+            WHERE e.tenant.id = :tenantId
+              AND e.eventType IN :types
+              AND e.createdAt >= :since
+              AND e.createdAt < :until
+            GROUP BY e.ipAddress
+            ORDER BY COUNT(e) DESC
+            """)
+    List<Object[]> findTopBlockedIpsInRange(
+            @Param("tenantId") Long tenantId,
+            @Param("types") Collection<EventType> types,
+            @Param("since") Instant since,
+            @Param("until") Instant until,
+            Pageable pageable);
 }

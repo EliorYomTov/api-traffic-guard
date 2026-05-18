@@ -3,11 +3,19 @@ import { Chart, registerables } from 'chart.js'
 Chart.register(...registerables)
 
 interface StatusCode { label: string; value: number; pct: number; color: string }
-interface Props { data: StatusCode[] }
 
-export default function DonutChart({ data }: Props) {
+interface Props {
+    data: StatusCode[]
+    totalRequests?: number
+    blockedRequests?: number
+}
+
+export default function DonutChart({ data, totalRequests, blockedRequests }: Props) {
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const chartRef  = useRef<Chart | null>(null)
+
+    const allowed = (totalRequests ?? 0) - (blockedRequests ?? 0)
+    const blocked = blockedRequests ?? 0
 
     useEffect(() => {
         if (!canvasRef.current) return
@@ -25,8 +33,8 @@ export default function DonutChart({ data }: Props) {
                         weight: 1,
                     },
                     {
-                        data: [85, 15],
-                        backgroundColor: ['#3b82f6', '#1f2a44'],
+                        data: [allowed, blocked],
+                        backgroundColor: ['#3b82f6', '#ef4444'],
                         borderColor: '#111a2e',
                         borderWidth: 3,
                         weight: 0.5,
@@ -39,19 +47,23 @@ export default function DonutChart({ data }: Props) {
                 cutout: '60%',
                 plugins: {
                     legend: { display: false },
-                    tooltip: {
-                        backgroundColor: '#0b1220',
-                        borderColor: '#1f2a44',
-                        borderWidth: 1,
-                    },
+                    tooltip: { enabled: false },
                 },
             },
         })
         return () => chartRef.current?.destroy()
-    }, [data])
+    }, [data, allowed, blocked])
 
     const total = data.reduce((sum, d) => sum + d.value, 0)
-    const fmt   = (n: number) => n >= 1000 ? (n / 1000).toFixed(1) + 'K' : n
+    const fmt   = (n: number) => n >= 1000 ? (n / 1000).toFixed(1) + 'K' : String(n)
+
+    const gridItems = [
+        ...data.map(({ label, value, pct, color }) => ({
+            label, value: fmt(value), sub: `${pct}%`, color,
+        })),
+        { label: 'allowed', value: fmt(allowed), sub: '', color: '#3b82f6' },
+        { label: 'blocked', value: fmt(blocked), sub: '', color: '#ef4444' },
+    ]
 
     return (
         <div style={{ background: '#111a2e', border: '1px solid #1f2a44', borderRadius: 10, padding: 18 }}>
@@ -70,14 +82,14 @@ export default function DonutChart({ data }: Props) {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 14 }}>
-                {data.map(({ label, value, pct, color }) => (
+                {gridItems.map(({ label, value, sub, color }) => (
                     <div key={label} style={{ background: '#0b1220', padding: '8px 10px', borderRadius: 6 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: '#94a3b8' }}>
                             <span style={{ width: 6, height: 6, background: color, borderRadius: '50%', display: 'inline-block' }} />
                             {label}
                         </div>
                         <div style={{ color: 'white', fontSize: 14, fontWeight: 500, marginTop: 2 }}>
-                            {fmt(value)} <span style={{ color: '#94a3b8', fontSize: 10 }}>{pct}%</span>
+                            {value} {sub && <span style={{ color: '#94a3b8', fontSize: 10 }}>{sub}</span>}
                         </div>
                     </div>
                 ))}
