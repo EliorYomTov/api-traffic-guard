@@ -20,25 +20,37 @@ class JwtServiceTest {
 
     @Test
     void generateToken_shouldContainUsername() {
-        String token = jwtService.generateToken(1L, "elior");
+        String token = jwtService.generateToken(1L, "elior", 2L, 60);
         assertThat(jwtService.extractUsername(token)).isEqualTo("elior");
     }
 
     @Test
     void generateToken_shouldContainUserId() {
-        String token = jwtService.generateToken(1L, "elior");
+        String token = jwtService.generateToken(1L, "elior", 2L, 60);
         assertThat(jwtService.extractUserId(token)).isEqualTo(1L);
     }
 
     @Test
+    void generateToken_shouldContainTenantId() {
+        String token = jwtService.generateToken(1L, "elior", 2L, 60);
+        assertThat(jwtService.extractTenantId(token)).isEqualTo(2L);
+    }
+
+    @Test
+    void generateToken_shouldContainRateLimit() {
+        String token = jwtService.generateToken(1L, "elior", 2L, 60);
+        assertThat(jwtService.extractRateLimitPerMinute(token)).isEqualTo(60);
+    }
+
+    @Test
     void isTokenValid_shouldReturnTrue_forValidToken() {
-        String token = jwtService.generateToken(1L, "elior");
+        String token = jwtService.generateToken(1L, "elior", 2L, 60);
         assertThat(jwtService.isTokenValid(token)).isTrue();
     }
 
     @Test
     void isTokenValid_shouldReturnFalse_forTamperedToken() {
-        String token = jwtService.generateToken(1L, "elior");
+        String token = jwtService.generateToken(1L, "elior", 2L, 60);
         String tampered = token.substring(0, token.length() - 5) + "XXXXX";
         assertThat(jwtService.isTokenValid(tampered)).isFalse();
     }
@@ -46,7 +58,7 @@ class JwtServiceTest {
     @Test
     void isTokenValid_shouldReturnFalse_forExpiredToken() {
         ReflectionTestUtils.setField(jwtService, "expiration", -1000L);
-        String token = jwtService.generateToken(1L, "elior");
+        String token = jwtService.generateToken(1L, "elior", 2L, 60);
         assertThat(jwtService.isTokenValid(token)).isFalse();
     }
 }
